@@ -1,0 +1,10 @@
+.terraform/
+# Commit .terraform.lock.hcl for reproducible provider versions (no secrets in it).
+terraform.tfvars
+*.tfvars.local
+*.tfstate
+*.tfstate.*
+crash.log
+*.yaml.kubeconfig
+
+.terraform.lock.hcl

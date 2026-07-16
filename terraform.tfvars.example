@@ -1,0 +1,41 @@
+# Copy to terraform.tfvars and fill in your values.
+#
+# REQUIRED — no defaults (your OCI account specifics):
+tenancy_id     = "ocid1.tenancy.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+compartment_id = "ocid1.compartment.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# --- Auth / region (optional; shown with defaults) ---
+# config_file_profile = "DEFAULT"          # profile in ~/.oci/config
+# region              = "us-phoenix-1"
+# ssh_public_key_path = "~/.ssh/id_rsa.pub"
+
+# --- Cluster (optional) ---
+# cluster_name       = "weka-oke"
+# kubernetes_version = "v1.34.2"
+
+# --- Workers: converged WEKA nodes (optional) ---
+# node_count          = 6
+# node_shape          = "VM.DenseIO.E5.Flex"   # DenseIO => local NVMe for WEKA drives
+# node_ocpus          = 16                      # DenseIO.E5.Flex: 8/16/24/32/40/48 only (1 NVMe per 8 OCPU)
+# node_memory_gb      = 192                     # 12 GB/OCPU on DenseIO.E5.Flex
+# node_boot_volume_gb = 200
+
+# --- Control plane access (optional) ---
+# control_plane_allowed_cidrs = ["0.0.0.0/0"]  # tighten to "<your-ip>/32" for anything real
+
+# ---------------------------------------------------------------------------
+# Reuse an EXISTING VCN instead of creating a fresh one.
+# Uncomment and fill in with your own network OCIDs. A single flat subnet can be
+# reused for cp/workers/pub_lb.
+# ---------------------------------------------------------------------------
+# create_vcn = false
+# vcn_id     = "ocid1.vcn.oc1..xxxxx"
+# subnets = {
+#   cp      = { id = "ocid1.subnet.oc1..xxxxx" }
+#   workers = { id = "ocid1.subnet.oc1..xxxxx" }
+#   pub_lb  = { id = "ocid1.subnet.oc1..xxxxx" }
+# }
+# nsgs = {
+#   cp      = { id = "ocid1.networksecuritygroup.oc1..xxxxx" }
+#   workers = { id = "ocid1.networksecuritygroup.oc1..xxxxx" }
+# }

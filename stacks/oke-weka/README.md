@@ -1,5 +1,8 @@
 # oke-weka — all-in-one (cluster + WEKA operator) one-click stack
 
+<!-- Works once the repo is public and a vX.Y.Z release is tagged. -->
+[![Deploy to Oracle Cloud](https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg)](https://cloud.oracle.com/resourcemanager/stacks/create?zipUrl=https://github.com/weka/oci-first-party-solution/releases/latest/download/oke-weka.zip)
+
 A **single** OCI Resource Manager stack that does the whole thing in **one apply**:
 
 1. OKE cluster + converged DenseIO node pool (hugepages, local NVMe, WEKA node prep)
@@ -53,6 +56,20 @@ kubectl get pods -n weka-operator-system       # operator Running
 kubectl get wekacluster dev -n default -w      # forms → healthy
 ```
 
+## Security posture (accepted)
+
+The OKE API endpoint is **public and reachable from `0.0.0.0/0`** — not for laptop `kubectl`, but
+because this stack installs WEKA over the Kubernetes API **from the ORM / Marketplace runner, which
+is outside your VCN**, so the endpoint must be reachable for the install to succeed. The endpoint is
+still **token-authenticated** (short-lived OCI/OKE tokens). This is an accepted, documented default
+(see [`SECURITY.md`](../../SECURITY.md)).
+
+**Hardening (optional, not implemented here):** for a fully private control plane, install WEKA from
+**inside the VCN** — enable the module's operator host (`create_operator = true`) and run the Helm
+install + `kubectl apply` from it via cloud-init, then set `control_plane_is_public = false`. That
+removes the public endpoint entirely at the cost of an always-on operator VM and dropping the
+in-stack helm/kubectl providers for the WEKA layer.
+
 ## Caveats
 
 - **Same-apply provider auth** (k8s providers targeting a cluster built in the same run) is the
@@ -62,7 +79,9 @@ kubectl get wekacluster dev -n default -w      # forms → healthy
 - **DenseIO capacity:** `VM.DenseIO.E5.Flex` is frequently *out-of-host-capacity*. If the node pool
   fails to launch, retry, lower `node_count`, or try another region/AD. (This is an OCI availability
   constraint, not a config issue.)
-- The WEKA CRs come from the repo-root [`../../crds`](../../crds) — same manifests the two-stack flow uses.
+- The WEKA CRs are **bundled** in this stack's own [`crds/`](crds) (copies of the repo-root
+  `crds/`) so the stack is self-contained — a standalone zip (ORM upload / publish) includes them.
+  Keep the two in sync if you edit the manifests.
 
 ## Teardown
 

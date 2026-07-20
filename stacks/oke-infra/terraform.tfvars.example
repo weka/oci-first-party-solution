@@ -5,9 +5,17 @@ tenancy_id     = "ocid1.tenancy.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 compartment_id = "ocid1.compartment.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
 # --- Auth / region (optional; shown with defaults) ---
-# config_file_profile = "DEFAULT"          # profile in ~/.oci/config
+# Pick auth per environment for the one `oci` CLI call (subnet attach):
+#   - ORM runner / Cloud Shell: leave both unset (default oci_cli_auth = "" => no --auth
+#                               flag; the environment's delegation/session token is used)
+#   - Local:                    config_file_profile = "DEFAULT"   # profile in ~/.oci/config
+#   - operator host:            oci_cli_auth = "instance_principal"
+# config_file_profile = "DEFAULT"
 # region              = "us-phoenix-1"
-# ssh_public_key_path = "~/.ssh/id_rsa.pub"
+
+# --- SSH key: content (ORM) or file path (local) ---
+# ssh_public_key      = "ssh-ed25519 AAAA... you@host"   # paste content in the ORM runner
+# ssh_public_key_path = "~/.ssh/id_rsa.pub"              # used only when ssh_public_key is null
 
 # --- Cluster (optional) ---
 # cluster_name       = "weka-oke"

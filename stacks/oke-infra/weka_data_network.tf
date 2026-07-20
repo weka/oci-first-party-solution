@@ -38,6 +38,18 @@
 # destroy-time provisioner puts the subnet back on the VCN default security list
 # so the weka-data security list detaches and can be deleted cleanly on teardown.
 
+locals {
+  # Auth for the out-of-band `oci` CLI calls below, robust across environments:
+  #   * config_file_profile set  -> `--profile <p>`            (local run)
+  #   * else oci_cli_auth set     -> `--auth <mode>`            (ORM = resource_principal)
+  #   * else                      -> no flag                    (Cloud Shell session auth)
+  oci_auth_args = (
+    var.config_file_profile != null ? "--profile ${var.config_file_profile}" :
+    trimspace(var.oci_cli_auth == null ? "" : var.oci_cli_auth) != "" ? "--auth ${var.oci_cli_auth}" :
+    ""
+  )
+}
+
 data "oci_core_vcn" "this" {
   vcn_id = module.oke.vcn_id
 }
@@ -79,8 +91,9 @@ resource "null_resource" "attach_weka_data_seclist" {
     subnet_id     = module.oke.worker_subnet_id
     weka_sl_id    = oci_core_security_list.weka_data.id
     default_sl_id = data.oci_core_vcn.this.default_security_list_id
-    profile       = var.config_file_profile
-    region        = var.region
+    # Baked into triggers because destroy-time provisioners can only read self.triggers.
+    auth_args = local.oci_auth_args
+    region    = var.region
   }
 
   # Attach our security list to the worker subnet. Replaces the empty default
@@ -90,7 +103,7 @@ resource "null_resource" "attach_weka_data_seclist" {
       oci network subnet update \
         --subnet-id '${self.triggers.subnet_id}' \
         --security-list-ids '["${self.triggers.weka_sl_id}"]' \
-        --force --profile '${self.triggers.profile}' --region '${self.triggers.region}'
+        --force ${self.triggers.auth_args} --region '${self.triggers.region}'
     EOT
   }
 
@@ -102,7 +115,7 @@ resource "null_resource" "attach_weka_data_seclist" {
       oci network subnet update \
         --subnet-id '${self.triggers.subnet_id}' \
         --security-list-ids '["${self.triggers.default_sl_id}"]' \
-        --force --profile '${self.triggers.profile}' --region '${self.triggers.region}' || true
+        --force ${self.triggers.auth_args} --region '${self.triggers.region}' || true
     EOT
   }
 

@@ -1,0 +1,188 @@
+title: "WEKA on OKE — All-in-one (cluster + operator)"
+description: >-
+  One-click stack: provisions the OKE cluster (converged DenseIO node pool,
+  hugepages, intra-VCN data-plane fix) AND installs the WEKA operator + image pull
+  secrets + WekaPolicy/WekaCluster/WekaClient — all in a single apply.
+schemaVersion: 1.1.0
+version: "20240101"
+locale: "en"
+
+variableGroups:
+  - title: "Hidden"
+    visible: false
+    variables:
+      - config_file_profile
+      - oci_cli_auth
+      - region
+      - home_region
+      - control_plane_allowed_cidrs
+      - vcn_cidrs
+      - subnets
+      - nsgs
+      - ssh_public_key_path
+
+  - title: "Identity"
+    variables:
+      - compartment_id
+      - tenancy_id
+
+  - title: "WEKA (operator + image pull)"
+    variables:
+      - quay_username
+      - quay_password
+      - operator_version
+
+  - title: "Cluster"
+    variables:
+      - cluster_name
+      - kubernetes_version
+      - cluster_type
+      - cni_type
+      - control_plane_is_public
+
+  - title: "Worker node pool (converged WEKA nodes)"
+    variables:
+      - node_pool_name
+      - node_count
+      - node_shape
+      - node_ocpus
+      - node_memory_gb
+      - node_boot_volume_gb
+      - node_hugepages
+      - worker_image_os_version
+
+  - title: "Networking"
+    variables:
+      - create_vcn
+      - vcn_id
+
+  - title: "SSH"
+    variables:
+      - ssh_public_key
+
+variables:
+  # --- Identity ---
+  compartment_id:
+    title: Compartment
+    description: Compartment where OKE + WEKA resources are created.
+    type: oci:identity:compartment:id
+    required: true
+  tenancy_id:
+    title: Tenancy
+    type: oci:identity:compartment:id
+    required: true
+
+  # --- WEKA ---
+  quay_username:
+    title: quay.io robot username
+    description: From https://get.weka.io. Used for the image pull secret.
+    type: string
+    required: true
+  quay_password:
+    title: quay.io robot password
+    description: From https://get.weka.io.
+    type: password
+    required: true
+    sensitive: true
+  operator_version:
+    title: WEKA operator version
+    type: string
+    default: v1.14.1
+    required: true
+
+  # --- Cluster ---
+  cluster_name:
+    title: Cluster name
+    type: string
+    required: true
+    default: weka-oke
+  kubernetes_version:
+    title: Kubernetes version
+    type: string
+    required: true
+    default: v1.34.2
+  cluster_type:
+    title: Cluster type
+    type: enum
+    enum: [basic, enhanced]
+    default: basic
+    required: true
+  cni_type:
+    title: Pod networking (CNI)
+    type: enum
+    enum: [flannel, npn]
+    default: flannel
+    required: true
+  control_plane_is_public:
+    title: Public API endpoint
+    type: boolean
+    default: true
+
+  # --- Workers ---
+  node_pool_name:
+    title: Node pool name
+    type: string
+    default: converged
+    required: true
+  node_count:
+    title: Worker count
+    description: WEKA needs enough DenseIO nodes to form (default 6). Lower only if capacity is tight.
+    type: number
+    default: 6
+    minimum: 1
+    required: true
+  node_shape:
+    title: Worker shape
+    description: DenseIO gives local NVMe for WEKA drives.
+    type: string
+    default: VM.DenseIO.E5.Flex
+    required: true
+  node_ocpus:
+    title: OCPUs per node
+    type: number
+    default: 16
+    required: true
+  node_memory_gb:
+    title: Memory (GB) per node
+    type: number
+    default: 192
+    required: true
+  node_boot_volume_gb:
+    title: Boot volume (GB)
+    type: number
+    default: 200
+    required: true
+  node_hugepages:
+    title: 2Mi hugepages per node
+    type: number
+    default: 8000
+    required: true
+  worker_image_os_version:
+    title: Worker OS version
+    type: string
+    default: "8"
+    required: true
+
+  # --- Networking ---
+  create_vcn:
+    title: Create a fresh VCN
+    type: boolean
+    default: true
+    required: true
+  vcn_id:
+    title: Existing VCN
+    description: Only used when "Create a fresh VCN" is off.
+    type: oci:core:vcn:id
+    required: false
+    visible:
+      not:
+        - create_vcn
+    dependsOn:
+      compartmentId: ${compartment_id}
+
+  # --- SSH ---
+  ssh_public_key:
+    title: SSH public key
+    description: Public key injected into worker nodes (paste the contents of your .pub file).
+    type: oci:core:ssh:publickey
+    required: false

@@ -103,7 +103,10 @@ module "oke" {
   region         = var.region
   home_region    = coalesce(var.home_region, var.region)
 
-  # SSH access to nodes
+  # SSH access to nodes. The module prefers ssh_public_key (content) and only
+  # reads ssh_public_key_path when content is null (see module variables-common.tf),
+  # so both can be passed safely — content wins for ORM, path for local.
+  ssh_public_key      = var.ssh_public_key
   ssh_public_key_path = var.ssh_public_key_path
 
   # Networking — fresh VCN by default; reuse existing when create_vcn = false.

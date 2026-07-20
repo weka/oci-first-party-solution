@@ -6,9 +6,32 @@
 # Auth / tenancy
 # ---------------------------------------------------------------------------
 variable "config_file_profile" {
-  description = "Profile in ~/.oci/config to authenticate with."
+  description = <<-EOT
+    Profile in ~/.oci/config to authenticate with for LOCAL / Cloud Shell runs
+    (e.g. "DEFAULT"). Leave null when running in OCI Resource Manager: ORM injects
+    resource-principal credentials automatically, and a null profile also switches
+    the weka-data security-list attach (weka_data_network.tf) to
+    `--auth resource_principal` instead of `--profile`.
+  EOT
   type        = string
-  default     = "DEFAULT"
+  default     = null
+}
+
+variable "oci_cli_auth" {
+  description = <<-EOT
+    Auth mode for the out-of-band `oci` CLI call (the worker-subnet security-list
+    attach in weka_data_network.tf), passed as `--auth <mode>`. Only used when
+    config_file_profile is null:
+      - ""  (empty, default) — no --auth flag; the environment is pre-authenticated.
+        Correct for BOTH the OCI Resource Manager runner (delegation/OBO token) and
+        OCI Cloud Shell (session token) — verified: the ORM runner has the oci CLI
+        and works with no flag, but NOT with --auth resource_principal.
+      - "instance_principal"  — an operator/compute host in a dynamic group.
+      - "resource_principal"  — only where OCI_RESOURCE_PRINCIPAL_* is set (NOT the ORM runner).
+    Ignored when config_file_profile is set (local runs use --profile).
+  EOT
+  type        = string
+  default     = ""
 }
 
 variable "region" {
@@ -34,10 +57,19 @@ variable "compartment_id" {
 }
 
 # ---------------------------------------------------------------------------
-# SSH
+# SSH — provide the key as CONTENT (ssh_public_key) or as a file PATH
+# (ssh_public_key_path). The module prefers content when set and only reads the
+# path otherwise, so use ssh_public_key in the ORM runner (no local files there)
+# and ssh_public_key_path for local convenience.
 # ---------------------------------------------------------------------------
+variable "ssh_public_key" {
+  description = "SSH public key CONTENT injected into worker nodes (use in the ORM runner). Takes precedence over ssh_public_key_path when set."
+  type        = string
+  default     = null
+}
+
 variable "ssh_public_key_path" {
-  description = "Path to the SSH public key injected into worker nodes."
+  description = "Path to the SSH public key file injected into worker nodes (local/Cloud Shell). Used only when ssh_public_key is null."
   type        = string
   default     = "~/.ssh/id_rsa.pub"
 }

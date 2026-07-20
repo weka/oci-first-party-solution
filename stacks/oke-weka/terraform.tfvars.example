@@ -1,0 +1,26 @@
+# Copy to terraform.tfvars and fill in. This ONE stack does cluster + WEKA.
+
+# REQUIRED — your OCI account specifics:
+tenancy_id     = "ocid1.tenancy.oc1..xxxxx"
+compartment_id = "ocid1.compartment.oc1..xxxxx"
+
+# REQUIRED — quay.io robot creds from https://get.weka.io (sensitive):
+quay_username = "weka.io+robot"
+quay_password = "..."
+
+# SSH key: content (ORM) or path (local). Content wins when set.
+# ssh_public_key      = "ssh-ed25519 AAAA... you@host"
+# ssh_public_key_path = "~/.ssh/id_rsa.pub"
+
+# Auth for the `oci` CLI calls (subnet attach + OKE token). Pick per environment:
+#   - ORM runner / Cloud Shell: leave both unset (default oci_cli_auth = "" => no
+#     --auth flag; the environment's delegation/session token is used).
+#   - Local:                    config_file_profile = "DEFAULT"
+#   - operator host:            oci_cli_auth = "instance_principal"
+# config_file_profile = "DEFAULT"
+# region              = "us-phoenix-1"
+
+# --- Optional cluster/worker overrides (defaults shown) ---
+# cluster_name     = "weka-oke"
+# node_count       = 6            # WEKA needs enough DenseIO nodes to form
+# operator_version = "v1.14.1"

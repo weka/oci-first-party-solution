@@ -8,14 +8,22 @@ whole path — *OKE creation → operator setup* — is Infrastructure-as-Code.
 
 ```
 stacks/
-  oke-infra/    # Stack 1: OKE cluster + WEKA node prep + intra-VCN data-plane fix
-  weka-layer/   # Stack 2: WEKA operator + image pull secrets + WekaPolicy/Cluster/Client
-crds/           # WEKA custom resource manifests (consumed by stacks/weka-layer)
+  oke-weka/     # ONE-CLICK: cluster + WEKA operator + CRs in a single apply
+  oke-infra/    # Stack 1 (staged): OKE cluster + WEKA node prep + intra-VCN data-plane fix
+  weka-layer/   # Stack 2 (staged): WEKA operator + image pull secrets + WekaPolicy/Cluster/Client
+crds/           # WEKA custom resource manifests (consumed by weka-layer and oke-weka)
 scripts/        # install-weka-operator.sh — the pre-Terraform manual path (fallback)
 ```
 
-Run them in order: **`oke-infra`** first, then feed its `cluster_id` / `region` outputs into
-**`weka-layer`**. Each has its own `README.md`, `variables.tf`, and `schema.yaml`.
+Two ways to deploy — pick one:
+
+- **One-click:** [`stacks/oke-weka/`](stacks/oke-weka) — a single ORM stack that provisions the
+  cluster **and** installs WEKA in one apply. Best for "click Apply, get a running WEKA-on-OKE".
+- **Staged (two stacks):** [`stacks/oke-infra/`](stacks/oke-infra) then
+  [`stacks/weka-layer/`](stacks/weka-layer) (feed stack 1's `cluster_id` / `region` into stack 2).
+  Best when you want infra and the WEKA layer managed/rerun independently.
+
+Each stack has its own `README.md`, `variables.tf`, and `schema.yaml`.
 
 ## Running in Resource Manager (and the one dependency)
 

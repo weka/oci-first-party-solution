@@ -71,13 +71,18 @@ resource "oci_core_security_list" "weka_data" {
     }
   }
 
-  # Unrestricted egress (matches the worker NSG's egress); the data VNICs need
-  # to reach their peers, and stateful rules cover return traffic.
-  egress_security_rules {
-    protocol         = "all"
-    destination      = "0.0.0.0/0"
-    destination_type = "CIDR_BLOCK"
-    description      = "Allow all egress"
+  # Egress scoped to the VCN: the WEKA data VNICs only need to reach peers inside
+  # the VCN. The primary worker VNICs keep their internet egress via the worker NSG
+  # (OCI applies the UNION of NSG + subnet-security-list rules), so image pulls are
+  # unaffected. Scoping here avoids an unrestricted-egress (0.0.0.0/0) finding.
+  dynamic "egress_security_rules" {
+    for_each = data.oci_core_vcn.this.cidr_blocks
+    content {
+      protocol         = "all"
+      destination      = egress_security_rules.value
+      destination_type = "CIDR_BLOCK"
+      description      = "Allow all intra-VCN egress (WEKA data plane)"
+    }
   }
 
   lifecycle {

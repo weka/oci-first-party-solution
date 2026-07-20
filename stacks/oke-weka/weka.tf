@@ -5,6 +5,11 @@
 # data-plane security-list fix are done — otherwise the operator pods would have no
 # nodes to schedule on. gavinbunney/kubectl resolves the CR kinds at apply time, so
 # the CRs tolerate the CRDs having just been installed by the Helm chart.
+#
+# NOTE: the CR manifests are BUNDLED in this stack's own crds/ dir (not the repo
+# root) so the stack is self-contained — a standalone zip (ORM upload / publish /
+# Deploy-to-Oracle-Cloud) includes them. Keep stacks/oke-weka/crds in sync with
+# the repo-root crds/ (they are copies).
 
 locals {
   operator_namespace     = "weka-operator-system"
@@ -57,12 +62,22 @@ resource "helm_release" "weka_operator" {
   # Chart-bundled CRDs install automatically; wait=true blocks until the release
   # is ready before the CRs apply.
   depends_on = [kubernetes_secret_v1.quay, module.oke]
+
+  # Fail loudly (on this always-present resource) if the bundled CR manifests are
+  # missing, instead of silently applying zero custom resources via an empty
+  # fileset on kubectl_manifest.weka_cr.
+  lifecycle {
+    precondition {
+      condition     = length(fileset("${path.module}/crds", "*.yaml")) > 0
+      error_message = "No CR manifests in ${path.module}/crds — the stack zip must bundle crds/*.yaml."
+    }
+  }
 }
 
 resource "kubectl_manifest" "weka_cr" {
-  for_each = fileset("${path.module}/../../crds", "*.yaml")
+  for_each = fileset("${path.module}/crds", "*.yaml")
 
-  yaml_body = file("${path.module}/../../crds/${each.value}")
+  yaml_body = file("${path.module}/crds/${each.value}")
 
   depends_on = [helm_release.weka_operator, kubernetes_secret_v1.quay]
 }

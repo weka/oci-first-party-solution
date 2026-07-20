@@ -1,0 +1,35 @@
+name: Release one-click stack zip
+
+# On a version tag push (e.g. v1.0.0), build a self-contained zip of the
+# all-in-one stack (stacks/oke-weka) and attach it to the GitHub Release. The
+# stable URL https://github.com/<owner>/<repo>/releases/latest/download/oke-weka.zip
+# is what the "Deploy to Oracle Cloud" button points at.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch: {} # allow manual runs
+
+permissions:
+  contents: write # create releases + upload assets
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build self-contained oke-weka.zip
+        run: |
+          cd stacks/oke-weka
+          # Zip the stack CONTENTS (schema.yaml at the zip root, crds/ bundled).
+          # Exclude local-only artifacts.
+          zip -qr "${GITHUB_WORKSPACE}/oke-weka.zip" . \
+            -x '.terraform/*' '*.tfstate*' 'terraform.tfvars'
+          unzip -l "${GITHUB_WORKSPACE}/oke-weka.zip"
+
+      - name: Attach to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: oke-weka.zip
+          fail_on_unmatched_files: true

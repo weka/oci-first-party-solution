@@ -1,8 +1,15 @@
 # oci-first-party-solution — WEKA on OKE
 
 Terraform to stand up a managed **OKE** cluster on OCI and layer **WEKA** (operator +
-custom resources) on top, packaged as two **OCI Resource Manager (ORM)** stacks so the
-whole path — *OKE creation → operator setup* — is Infrastructure-as-Code.
+custom resources) on top, delivered as **OCI Resource Manager (ORM)** stacks so the
+whole path — *OKE creation → operator setup* — is Infrastructure-as-Code, either as a
+single one-click stack or as two staged stacks.
+
+<!-- Works once the repo is public and a vX.Y.Z release is tagged (see .github/workflows/release.yml). -->
+[![Deploy to Oracle Cloud](https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg)](https://cloud.oracle.com/resourcemanager/stacks/create?zipUrl=https://github.com/weka/oci-first-party-solution/releases/latest/download/oke-weka.zip)
+
+Licensed under **Apache-2.0** (see [LICENSE](LICENSE)). Security notes and the
+accepted IaC posture are in [SECURITY.md](SECURITY.md).
 
 ## Layout
 

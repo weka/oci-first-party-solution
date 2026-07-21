@@ -24,8 +24,8 @@ compartment_id = "ocid1.compartment.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 # --- Workers: converged WEKA nodes (optional) ---
 # node_count          = 6
 # node_shape          = "VM.DenseIO.E5.Flex"   # DenseIO => local NVMe for WEKA drives
-# node_ocpus          = 16                      # DenseIO.E5.Flex: 8/16/24/32/40/48 only (1 NVMe per 8 OCPU)
-# node_memory_gb      = 192                     # 12 GB/OCPU on DenseIO.E5.Flex
+# node_ocpus          = 8                       # DenseIO.E5.Flex: 8/16/24/32/40/48 (1 NVMe per 8 OCPU); default 8 = 1 NVMe
+# node_memory_gb      = 96                      # 12 GB/OCPU on DenseIO.E5.Flex (8 OCPU => 96 GB)
 # node_boot_volume_gb = 200
 
 # --- Control plane access (optional) ---

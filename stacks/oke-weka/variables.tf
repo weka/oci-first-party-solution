@@ -121,9 +121,10 @@ variable "control_plane_allowed_cidrs" {
 # (VM.DenseIO.E5.Flex), whose local NVMe the WEKA operator's sign-drives policy
 # discovers as `weka.io/drives`. That shape only accepts fixed OCPU:memory:NVMe
 # combos (12 GB/OCPU, 1 NVMe per 8 OCPU): 8/96->1nvme, 16/192->2, 24/288->3, ...
-# We use 16 OCPU / 192 GB (2 NVMe). 8 OCPU is too few cores for WEKA (drive +
-# compute + mgmt processes overlap on the same physical core and IO never
-# starts); 16 gives WEKA enough dedicated cores.
+# We default to the smallest tier, 8 OCPU / 96 GB (1 NVMe per node): enough for
+# WEKA and the smallest DenseIO footprint, which also places most easily against
+# DenseIO host-capacity limits. Bump node_ocpus/node_memory_gb together (same
+# 12 GB/OCPU, +1 NVMe per +8 OCPU) for more per-node drives/cores.
 # ---------------------------------------------------------------------------
 variable "node_pool_name" {
   description = "Name of the worker node pool."
@@ -137,6 +138,16 @@ variable "node_count" {
   default     = 6
 }
 
+variable "worker_placement_ads" {
+  description = <<-EOT
+    Comma-separated availability-domain NUMBERS to place worker nodes in (e.g. "1,2").
+    Empty (default) uses all ADs. Use it to steer the DenseIO node pool away from ADs
+    that are out of host capacity (check with `oci compute compute-capacity-report`).
+  EOT
+  type        = string
+  default     = ""
+}
+
 variable "node_shape" {
   description = "Worker node shape. DenseIO gives local NVMe for WEKA drives."
   type        = string
@@ -144,15 +155,15 @@ variable "node_shape" {
 }
 
 variable "node_ocpus" {
-  description = "OCPUs per worker node. VM.DenseIO.E5.Flex only accepts 8/16/24/32/40/48 (1 NVMe per 8 OCPU). 16 = 2 NVMe and enough cores for WEKA (8 overlaps cores)."
+  description = "OCPUs per worker node. VM.DenseIO.E5.Flex accepts 8/16/24/32/40/48 (1 NVMe per 8 OCPU). Default 8 = 1 NVMe (smallest DenseIO tier)."
   type        = number
-  default     = 16
+  default     = 8
 }
 
 variable "node_memory_gb" {
-  description = "Memory (GB) per worker node. VM.DenseIO.E5.Flex requires 12 GB/OCPU, so 16 OCPU => 192 GB."
+  description = "Memory (GB) per worker node. VM.DenseIO.E5.Flex requires 12 GB/OCPU, so 8 OCPU => 96 GB."
   type        = number
-  default     = 192
+  default     = 96
 }
 
 variable "node_boot_volume_gb" {

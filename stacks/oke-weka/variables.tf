@@ -69,9 +69,9 @@ variable "ssh_public_key" {
 }
 
 variable "ssh_public_key_path" {
-  description = "Path to the SSH public key file injected into worker nodes (local/Cloud Shell). Used only when ssh_public_key is null."
+  description = "Path to the SSH public key file injected into worker nodes (local/Cloud Shell). Used only when ssh_public_key is null. Leave null in the ORM runner (no local files there); set a path for local runs, e.g. \"~/.ssh/id_rsa.pub\"."
   type        = string
-  default     = "~/.ssh/id_rsa.pub"
+  default     = null
 }
 
 # ---------------------------------------------------------------------------

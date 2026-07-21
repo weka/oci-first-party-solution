@@ -38,12 +38,13 @@ its auth from **`oci_cli_auth`** (default `""` = no `--auth` flag; the environme
 > with no `--auth` flag (it does **not** support `--auth resource_principal`). Cloud Shell is identical.
 
 **SSH key:** provide `ssh_public_key` (content) in the ORM runner (no local files there); locally,
-`ssh_public_key_path` (default `~/.ssh/id_rsa.pub`) is used when content is null.
+set `ssh_public_key_path` (e.g. `~/.ssh/id_rsa.pub`) and it is used when content is null. Both
+default to null, so SSH is optional — leave both empty for no node SSH access.
 
 ## Prerequisites
 
 - `terraform` >= 1.3, the `oci` CLI, and (for local runs) a working `~/.oci/config`.
-- An SSH public key (default `~/.ssh/id_rsa.pub`; override `ssh_public_key_path`).
+- Optional: an SSH public key — paste content into `ssh_public_key`, or set `ssh_public_key_path` (e.g. `~/.ssh/id_rsa.pub`) for local runs.
 
 ## Usage (local / Cloud Shell)
 

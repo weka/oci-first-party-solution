@@ -63,8 +63,11 @@ locals {
   }
 
   # Single converged node pool (WEKA backends + clients).
+  # merge(): optionally pin the pool to specific availability domains via
+  # placement_ads when var.worker_placement_ads is set (e.g. to steer DenseIO
+  # around ADs that are out of host capacity). Empty => module default (all ADs).
   worker_pools = {
-    (var.node_pool_name) = {
+    (var.node_pool_name) = merge({
       description      = "WEKA converged node pool"
       mode             = "node-pool"
       size             = var.node_count
@@ -84,7 +87,9 @@ locals {
         content      = local.worker_cloud_init
         content_type = "text/x-shellscript"
       }]
-    }
+      }, var.worker_placement_ads != "" ? {
+      placement_ads = [for n in split(",", var.worker_placement_ads) : tonumber(trimspace(n))]
+    } : {})
   }
 }
 

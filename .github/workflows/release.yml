@@ -25,7 +25,7 @@ jobs:
           # Zip the stack CONTENTS (schema.yaml at the zip root, crds/ bundled).
           # Exclude local-only artifacts.
           zip -qr "${GITHUB_WORKSPACE}/oke-weka.zip" . \
-            -x '.terraform/*' '*.tfstate*' 'terraform.tfvars'
+            -x '.terraform/*' '*.tfstate*' 'terraform.tfvars' '*.auto.tfvars' 'orm-vars.json'
           unzip -l "${GITHUB_WORKSPACE}/oke-weka.zip"
 
       - name: Attach to release

@@ -139,13 +139,15 @@ variables:
     required: true
   node_ocpus:
     title: OCPUs per node
+    description: VM.DenseIO.E5.Flex accepts 8/16/24/32/40/48 (1 NVMe per 8 OCPU). Default 8 = 1 NVMe (smallest tier).
     type: number
-    default: 16
+    default: 8
     required: true
   node_memory_gb:
     title: Memory (GB) per node
+    description: VM.DenseIO.E5.Flex requires 12 GB/OCPU (8 OCPU => 96 GB).
     type: number
-    default: 192
+    default: 96
     required: true
   node_boot_volume_gb:
     title: Boot volume (GB)

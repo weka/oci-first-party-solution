@@ -77,7 +77,8 @@ WEKA has three requirements the stock module doesn't provide, all handled here:
 - **drives** — a managed OKE node pool can't attach data block volumes via Terraform, so the default
   shape is `VM.DenseIO.E5.Flex` (local NVMe), which the WEKA operator's sign-drives policy discovers
   as `weka.io/drives`. That shape accepts fixed OCPU:memory:NVMe combos (1 NVMe per 8 OCPU); the
-  default 16 OCPU / 192 GB yields 2 NVMe and enough cores for WEKA.
+  default 8 OCPU / 96 GB yields 1 NVMe per node (smallest DenseIO tier — also the easiest to place
+  against DenseIO host-capacity limits). Bump `node_ocpus`/`node_memory_gb` for more drives/cores.
 - **data-plane security** (`weka_data_network.tf`) — WEKA's ensure-nics attaches a secondary "data"
   VNIC per IO node with **no NSG**, but the module puts all intra-cluster allow rules on the worker
   NSG (scoped to NSG membership) and leaves the worker subnet on an empty default security list.

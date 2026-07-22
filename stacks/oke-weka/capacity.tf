@@ -54,9 +54,13 @@ locals {
   ads_with_capacity = [for name, status in local.capacity_status_by_ad : name if status == "AVAILABLE"]
 }
 
-# The gate. module.oke depends on it (see main.tf), so the whole cluster build
-# waits behind the capacity verdict; the precondition fails the apply early —
-# before any resource is created — when no AD has capacity.
+# The gate. It is intentionally NOT wired as a module dependency (that would
+# defer the module's data sources and break a for_each inside it — see the note
+# on module.oke in main.tf). Instead it stands alone: the capacity reports
+# resolve in seconds, so this precondition fails the apply almost immediately —
+# well before the slow worker node-pool build the capacity actually gates. A
+# little networking may be created before the failure surfaces; `terraform
+# destroy` (the stack's teardown) cleans it up.
 resource "terraform_data" "capacity_gate" {
   count = local.capacity_preflight ? 1 : 0
   input = local.capacity_status_by_ad

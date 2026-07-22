@@ -22,11 +22,16 @@ compartment_id = "ocid1.compartment.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 # kubernetes_version = "v1.34.2"
 
 # --- Workers: converged WEKA nodes (optional) ---
+# flavor          = "non-production"   # non-production: Standard.E5.Flex + block volume (default)
+#                                      # production:     DenseIO.E5.Flex + local NVMe (best perf, scarce quota)
+# data_volume_gb  = 100                # block-volume size (GB) for non-production flavor; ignored for production
 # node_count          = 6
-# node_shape          = "VM.DenseIO.E5.Flex"   # DenseIO => local NVMe for WEKA drives
-# node_ocpus          = 8                       # DenseIO.E5.Flex: 8/16/24/32/40/48 (1 NVMe per 8 OCPU); default 8 = 1 NVMe
-# node_memory_gb      = 96                      # 12 GB/OCPU on DenseIO.E5.Flex (8 OCPU => 96 GB)
 # node_boot_volume_gb = 200
+
+# --- Advanced sizing overrides (optional; null = use flavor default) ---
+# node_ocpus     = 16                   # optional: override flavor default (e.g. 16 OCPU DenseIO = 2 NVMe)
+# node_memory_gb = 192                  # optional: override flavor default (DenseIO E5 min 12 GB/OCPU)
+# node_shape     = "VM.DenseIO.E5.Flex" # optional: override flavor default shape
 
 # --- Control plane access (optional) ---
 # control_plane_allowed_cidrs = ["0.0.0.0/0"]  # tighten to "<your-ip>/32" for anything real

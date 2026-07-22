@@ -114,17 +114,84 @@ variable "control_plane_allowed_cidrs" {
 }
 
 # ---------------------------------------------------------------------------
+# Flavor — the single dial that determines drive topology and pool mode.
+#
+# production:     VM.DenseIO.E5.Flex, node-pool (managed OKE).
+#                 Local NVMe is discovered as weka.io/drives — no block volume.
+#                 DenseIO E5 requires 12 GB/OCPU; 8 OCPU = 96 GB = 1 NVMe.
+#                 Use for real WEKA testing with best drive performance.
+#                 DenseIO quota is limited; check AD capacity before provisioning.
+#
+# non-production: VM.Standard.E5.Flex, instance-pool (self-managed).
+#                 No local NVMe; WEKA drives come from an attached block volume
+#                 (paravirtualized, size = var.data_volume_gb, default 100 GB).
+#                 Standard shapes are widely available. Good for operator/CSI
+#                 integration testing where IO performance is not the focus.
+#
+# Shape, OCPU, and memory are fully determined by the flavor (see locals in
+# main.tf). node_count, node_boot_volume_gb, and node_hugepages remain as
+# explicit overrides because they are independent of drive topology.
+# ---------------------------------------------------------------------------
+variable "flavor" {
+  description = <<-EOT
+    Cluster flavor — controls drive topology, node shape, and pool mode:
+      "non-production" (default): VM.Standard.E5.Flex, instance-pool, paravirtualized
+        block volume as WEKA drives. Standard shapes have abundant quota; ideal for
+        operator/CSI integration testing where raw IO throughput is not the goal.
+      "production": VM.DenseIO.E5.Flex, node-pool (managed OKE), local NVMe as WEKA
+        drives. Best drive performance. DenseIO quota is limited — check AD capacity
+        (oci compute compute-capacity-report) before provisioning.
+  EOT
+  type        = string
+  default     = "non-production"
+  validation {
+    condition     = contains(["production", "non-production"], var.flavor)
+    error_message = "flavor must be one of: production, non-production"
+  }
+}
+
+variable "data_volume_gb" {
+  description = "Size (GB) of the paravirtualized block-volume data disk attached per worker node in non-production flavor. Ignored for production (local NVMe is used instead). Minimum 50, default 100."
+  type        = number
+  default     = 100
+}
+
+# ---------------------------------------------------------------------------
+# Advanced sizing overrides (optional).
+#
+# When null (default), each value is derived from var.flavor (see locals in
+# main.tf). Set any of these to override the flavor default — for example,
+# node_ocpus = 16 to get a 2-NVMe DenseIO node under the production flavor.
+#
+# NOTE: worker_mode (node-pool vs instance-pool) remains tied to flavor and
+# cannot be overridden here. Choosing a shape that mismatches the flavor-driven
+# pool mode (e.g. a DenseIO shape with non-production/instance-pool) is a
+# documented foot-gun — it is not prevented but also not recommended.
+# ---------------------------------------------------------------------------
+variable "node_shape" {
+  description = "Optional override for the worker node shape. When null, derived from flavor (VM.DenseIO.E5.Flex for production, VM.Standard.E5.Flex for non-production)."
+  type        = string
+  default     = null
+}
+
+variable "node_ocpus" {
+  description = "Optional override for OCPUs per worker node. When null, derived from flavor (8 for production, 10 for non-production). Example: set 16 to get a 2-NVMe DenseIO node under production flavor."
+  type        = number
+  default     = null
+}
+
+variable "node_memory_gb" {
+  description = "Optional override for memory (GB) per worker node. When null, derived from flavor (96 for production, 80 for non-production)."
+  type        = number
+  default     = null
+}
+
+# ---------------------------------------------------------------------------
 # Worker node pool (converged WEKA nodes).
 #
-# WEKA needs local drives to sign. A managed OKE node pool can't attach data
-# block volumes via Terraform, so we default to a DenseIO shape
-# (VM.DenseIO.E5.Flex), whose local NVMe the WEKA operator's sign-drives policy
-# discovers as `weka.io/drives`. That shape only accepts fixed OCPU:memory:NVMe
-# combos (12 GB/OCPU, 1 NVMe per 8 OCPU): 8/96->1nvme, 16/192->2, 24/288->3, ...
-# We default to the smallest tier, 8 OCPU / 96 GB (1 NVMe per node): enough for
-# WEKA and the smallest DenseIO footprint, which also places most easily against
-# DenseIO host-capacity limits. Bump node_ocpus/node_memory_gb together (same
-# 12 GB/OCPU, +1 NVMe per +8 OCPU) for more per-node drives/cores.
+# node_count, node_boot_volume_gb, and node_hugepages remain explicit because
+# they are independent of flavor. Shape, OCPU, and memory are derived from
+# var.flavor by default but can be overridden with the variables above.
 # ---------------------------------------------------------------------------
 variable "node_pool_name" {
   description = "Name of the worker node pool."
@@ -146,24 +213,6 @@ variable "worker_placement_ads" {
   EOT
   type        = string
   default     = ""
-}
-
-variable "node_shape" {
-  description = "Worker node shape. DenseIO gives local NVMe for WEKA drives."
-  type        = string
-  default     = "VM.DenseIO.E5.Flex"
-}
-
-variable "node_ocpus" {
-  description = "OCPUs per worker node. VM.DenseIO.E5.Flex accepts 8/16/24/32/40/48 (1 NVMe per 8 OCPU). Default 8 = 1 NVMe (smallest DenseIO tier)."
-  type        = number
-  default     = 8
-}
-
-variable "node_memory_gb" {
-  description = "Memory (GB) per worker node. VM.DenseIO.E5.Flex requires 12 GB/OCPU, so 8 OCPU => 96 GB."
-  type        = number
-  default     = 96
 }
 
 variable "node_boot_volume_gb" {

@@ -7,11 +7,45 @@
 # cluster is up (see README), keeping cluster infra separate from the WEKA stack.
 
 locals {
-  # WEKA node prep injected as OKE cloud-init: register the node via the OKE
-  # init script, grow the root fs, then configure hugepages + kubelet static CPU
-  # policy — WEKA drive/compute containers request hugepages-2Mi and won't
-  # schedule without them. We fully own the node bring-up
-  # (disable_default_cloud_init), so this script must also run the stock OKE init.
+  # ---------------------------------------------------------------------------
+  # Flavor → shape / mode / drive topology
+  #
+  # production:
+  #   shape = VM.DenseIO.E5.Flex   mode = node-pool (managed OKE)
+  #   8 OCPU / 96 GB (12 GB/OCPU × 8). 1 local NVMe per 8 OCPU.
+  #   WEKA operator's sign-drives WekaPolicy discovers NVMe as weka.io/drives.
+  #   No block volume needed or attached.
+  #   Trade-off: DenseIO quota is limited; check AD capacity before provisioning
+  #   (oci compute compute-capacity-report).
+  #
+  # non-production:
+  #   shape = VM.Standard.E5.Flex  mode = instance-pool (self-managed)
+  #   10 OCPU / 80 GB. No local NVMe.
+  #   WEKA drives come from a paravirtualized block volume (var.data_volume_gb, ≥50 GB).
+  #   Standard shapes have abundant quota; ideal for operator/CSI integration
+  #   testing where raw IO throughput is not the goal.
+  # ---------------------------------------------------------------------------
+  is_production = var.flavor == "production"
+
+  # Shape / sizing — flavor-derived by default; optional var overrides win when set.
+  # worker_mode stays flavor-locked (pool mode must match drive topology).
+  # Note: set node_ocpus = 16 for a 2-NVMe DenseIO node under production flavor.
+  node_shape     = coalesce(var.node_shape, local.is_production ? "VM.DenseIO.E5.Flex" : "VM.Standard.E5.Flex")
+  node_ocpus     = var.node_ocpus     != null ? var.node_ocpus     : (local.is_production ? 8  : 10)
+  node_memory_gb = var.node_memory_gb != null ? var.node_memory_gb : (local.is_production ? 96 : 80)
+  worker_mode    = local.is_production ? "node-pool" : "instance-pool"
+
+  # ---------------------------------------------------------------------------
+  # Cloud-init — shared for BOTH flavors.
+  #
+  # We set disable_default_cloud_init = true and supply this fully self-contained
+  # script that (1) fetches and runs the stock OKE init from IMDS, then (2)
+  # configures hugepages + kubelet static-CPU policy. This approach is verified
+  # for node-pool (production/DenseIO) and is intentionally kept for instance-pool
+  # (non-production/Standard) as well: the oke-init.sh bootstrap works regardless
+  # of pool mode — the node joins via the same IMDS script whether the pool is
+  # managed (node-pool) or self-managed (instance-pool).
+  # ---------------------------------------------------------------------------
   worker_cloud_init = <<-EOT
     #!/bin/bash
     curl -fH "Authorization: Bearer Oracle" -L0 169.254.169.254/opc/v2/instance/metadata/oke_init_script | base64 -d > /var/run/oke-init.sh
@@ -62,34 +96,53 @@ locals {
     pods     = {}
   }
 
+  # ---------------------------------------------------------------------------
   # Single converged node pool (WEKA backends + clients).
-  # merge(): optionally pin the pool to specific availability domains via
-  # placement_ads when var.worker_placement_ads is set (e.g. to steer DenseIO
-  # around ADs that are out of host capacity). Empty => module default (all ADs).
+  #
+  # merge() layer 1 (base): shape/sizing/labels/cloud-init — same for both flavors.
+  # merge() layer 2 (placement): optionally pin ADs via placement_ads when
+  #   var.worker_placement_ads is set (e.g. to steer DenseIO around out-of-capacity
+  #   ADs). Empty => module default (all ADs).
+  # merge() layer 3 (block volume): non-production only — attach a paravirtualized
+  #   block volume as WEKA drives. Production (DenseIO) has local NVMe presented
+  #   automatically by the hypervisor; no block volume is needed or attached.
+  # ---------------------------------------------------------------------------
   worker_pools = {
-    (var.node_pool_name) = merge({
-      description      = "WEKA converged node pool"
-      mode             = "node-pool"
-      size             = var.node_count
-      shape            = var.node_shape
-      ocpus            = var.node_ocpus
-      memory           = var.node_memory_gb
-      boot_volume_size = var.node_boot_volume_gb
-      # WEKA converged node labels (backends + clients).
-      node_labels = {
-        "weka.io/tool"              = "terraform-oci-oke"
-        "weka.io/supports-backends" = "true"
-        "weka.io/supports-clients"  = "true"
+    (var.node_pool_name) = merge(
+      {
+        description      = "WEKA converged node pool (flavor=${var.flavor})"
+        mode             = local.worker_mode
+        size             = var.node_count
+        shape            = local.node_shape
+        ocpus            = local.node_ocpus
+        memory           = local.node_memory_gb
+        boot_volume_size = var.node_boot_volume_gb
+        # WEKA converged node labels (backends + clients).
+        node_labels = {
+          "weka.io/tool"              = "terraform-oci-oke"
+          "weka.io/supports-backends" = "true"
+          "weka.io/supports-clients"  = "true"
+        }
+        # Own the node bring-up so we can add the WEKA hugepages/kubelet prep.
+        # Works for both node-pool and instance-pool (see cloud-init comment above).
+        disable_default_cloud_init = true
+        cloud_init = [{
+          content      = local.worker_cloud_init
+          content_type = "text/x-shellscript"
+        }]
+      },
+      # AD pinning — preserved from the original stack.
+      var.worker_placement_ads != "" ? {
+        placement_ads = [for n in split(",", var.worker_placement_ads) : tonumber(trimspace(n))]
+      } : {},
+      # Non-production only: attach a paravirtualized block volume as WEKA drives.
+      # Production (DenseIO node-pool) uses local NVMe — no block volume attached.
+      local.is_production ? {} : {
+        disable_block_volume     = false
+        block_volume_size_in_gbs = var.data_volume_gb
+        block_volume_type        = "paravirtualized"
       }
-      # Own the node bring-up so we can add the WEKA hugepages/kubelet prep.
-      disable_default_cloud_init = true
-      cloud_init = [{
-        content      = local.worker_cloud_init
-        content_type = "text/x-shellscript"
-      }]
-      }, var.worker_placement_ads != "" ? {
-      placement_ads = [for n in split(",", var.worker_placement_ads) : tonumber(trimspace(n))]
-    } : {})
+    )
   }
 }
 
@@ -140,8 +193,9 @@ module "oke" {
   create_operator      = false
   create_iam_resources = false
 
-  # Workers — managed OKE node pool, OKE (Oracle Linux) image.
-  worker_pool_mode        = "node-pool"
+  # Workers — pool mode driven by flavor: node-pool (production/DenseIO) or
+  # instance-pool (non-production/Standard). See locals above for details.
+  worker_pool_mode        = local.worker_mode
   worker_image_type       = "oke"
   worker_image_os         = "Oracle Linux"
   worker_image_os_version = var.worker_image_os_version

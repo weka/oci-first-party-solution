@@ -80,7 +80,7 @@ variable "ssh_public_key_path" {
 variable "cluster_name" {
   description = "Name of the OKE cluster."
   type        = string
-  default     = "weka-oke"
+  default     = "weka-cluster"
 }
 
 variable "kubernetes_version" {
@@ -158,6 +158,35 @@ variable "data_volume_gb" {
 }
 
 # ---------------------------------------------------------------------------
+# Production sizing — driven by target usable capacity, not worker count.
+#
+# A production worker is VM.DenseIO.E5.Flex (8 OCPU) with 1 x 6.8 TB local NVMe
+# (one failure domain). WEKA usable = (N - HS) x 6.8 x SW/(SW + RL) x 0.9, with a
+# protection scheme that adapts to cluster size (see main.tf locals):
+#   - N < 21  : "x+2+1"  (RL=2, HS=1, SW = min(16, N-3)) -> usable = 6.12 x SW
+#   - N >= 21 : "16+4+1" (RL=4, HS=1, SW=16), then keep scaling past 21
+# The worker count is derived in main.tf from target_usable_tb (min 6). Only used
+# when flavor = production; non-production sizing uses var.node_count directly.
+# ---------------------------------------------------------------------------
+variable "target_usable_tb" {
+  description = <<-EOT
+    Target WEKA usable capacity in TB (production flavor only). The worker count is
+    derived from this. Each VM.DenseIO.E5.Flex node contributes 1 x 6.8 TB NVMe;
+    protection is "x+2+1" below 21 nodes (usable ~= 6.12 TB per data drive) and
+    "16+4+1" at 21+ nodes (double protection needs 16+4+1 = 21 servers), scaling
+    past 21 at ~4.9 TB usable/node. Reference points: ~18 TB at the 6-node minimum
+    (3+2+1), ~43 TB at 10 nodes (7+2+1), ~98 TB at 19-21 nodes. See the weka_sizing
+    output for the exact scheme and capacity of the derived cluster.
+  EOT
+  type        = number
+  default     = 18
+  validation {
+    condition     = var.target_usable_tb >= 1
+    error_message = "target_usable_tb must be at least 1 TB."
+  }
+}
+
+# ---------------------------------------------------------------------------
 # Advanced sizing overrides (optional).
 #
 # When null (default), each value is derived from var.flavor (see locals in
@@ -201,9 +230,13 @@ variable "node_pool_name" {
 }
 
 variable "node_count" {
-  description = "Number of worker nodes."
+  description = "Number of worker nodes (non-production flavor). Ignored for production, where the count is derived from target_usable_tb. Minimum 6."
   type        = number
   default     = 6
+  validation {
+    condition     = var.node_count >= 6
+    error_message = "node_count must be at least 6 (WEKA needs enough nodes to form a cluster)."
+  }
 }
 
 variable "worker_placement_ads" {

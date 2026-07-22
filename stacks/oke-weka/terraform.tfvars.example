@@ -22,16 +22,21 @@ quay_password = "..."
 # region              = "us-phoenix-1"
 
 # --- Workers: converged WEKA nodes (optional) ---
-# flavor          = "non-production"   # non-production: Standard.E5.Flex + block volume (default)
+# flavor           = "non-production"  # non-production: Standard.E5.Flex + block volume (default)
 #                                      # production:     DenseIO.E5.Flex + local NVMe (best perf, scarce quota)
-# data_volume_gb  = 100                # block-volume size (GB) for non-production flavor; ignored for production
-# node_count      = 6
+#
+# production flavor — sized by target usable capacity (worker count is derived):
+# target_usable_tb = 18                # ~18 TB ≈ 6-node min (3+2+1); ~43 TB ≈ 10 nodes (7+2+1); ~98 TB ≈ 19-21 nodes
+#
+# non-production flavor — you set the instance count + per-node block volume:
+# node_count       = 6                 # minimum 6
+# data_volume_gb   = 100               # block-volume size (GB); ignored for production
 
-# --- Advanced sizing overrides (optional; null = use flavor default) ---
-# node_ocpus     = 16                   # optional: override flavor default (e.g. 16 OCPU DenseIO = 2 NVMe)
-# node_memory_gb = 192                  # optional: override flavor default (OCI allows 1-48 GB/OCPU for DenseIO.E5.Flex)
-# node_shape     = "VM.DenseIO.E5.Flex" # optional: override flavor default shape
+# --- Advanced overrides (optional; null = use flavor default; not shown in the ORM form) ---
+# node_ocpus     = 16                   # override flavor default (e.g. 16 OCPU DenseIO = 2 NVMe)
+# node_memory_gb = 192                  # override flavor default (OCI allows 1-48 GB/OCPU for DenseIO.E5.Flex)
+# node_shape     = "VM.DenseIO.E5.Flex" # override flavor default shape
 
 # --- Optional cluster/operator overrides (defaults shown) ---
-# cluster_name     = "weka-oke"
+# cluster_name     = "weka-cluster"
 # operator_version = "v1.14.1"

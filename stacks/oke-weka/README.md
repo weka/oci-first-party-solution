@@ -31,7 +31,14 @@ runner ships `oci`/`kubectl`/`helm` and is pre-authenticated**, so with the defa
 
 1. **Resource Manager → Stacks → Create stack** from a zip of this folder (or a source-control
    config provider with working dir `stacks/oke-weka`).
-2. Fill the form (`schema.yaml`): compartment, **quay.io creds**, SSH key (paste content), sizing.
+2. Fill the form (`schema.yaml`): compartment, **quay.io creds**, SSH key (paste content), and
+   sizing — pick a **flavor**. *production* (DenseIO + local NVMe) is sized by a **target usable
+   capacity (TB)**: the stack derives the worker count, using WEKA protection that adapts to size —
+   `x+2+1` below 21 nodes (`~6.12 TB` usable per data drive) and `16+4+1` at 21+ nodes (double
+   protection needs 16+4+1 = 21 servers), scaling past 21 at `~4.9 TB`/node. Reference points:
+   ~18 TB at the 6-node minimum (3+2+1), ~43 TB at 10 nodes (7+2+1), ~98 TB at 19-21 nodes. The
+   derived scheme + capacity is printed as the `weka_sizing` output. *non-production* (Standard +
+   block volume) instead takes an instance count (min 6) and a per-node data-volume size.
 3. **Plan**, then **Apply**. When it finishes, the cluster is up *and* WEKA is installed.
 
 > The `kubernetes`/`helm`/`kubectl` **providers** are self-contained (no `kubectl`/`helm` binaries).
@@ -51,7 +58,7 @@ cd stacks/oke-weka
 cp terraform.tfvars.example terraform.tfvars   # tenancy_id, compartment_id, quay creds (+ profile for local)
 terraform init && terraform apply              # ~15–20 min: cluster + WEKA
 terraform output -raw create_kubeconfig_command | bash
-export KUBECONFIG=~/weka-oke.yaml
+export KUBECONFIG=~/weka-cluster.yaml
 kubectl get pods -n weka-operator-system       # operator Running
 kubectl get wekacluster dev -n default -w      # forms → healthy
 ```
@@ -76,9 +83,10 @@ in-stack helm/kubectl providers for the WEKA layer.
   standard OKE/EKS/GKE one-click pattern and works, but it's more fragile than two stacks on
   *replacement* — if you ever recreate the cluster, prefer `terraform apply` in two phases or use
   the separate `../oke-infra` + `../weka-layer` stacks.
-- **DenseIO capacity:** `VM.DenseIO.E5.Flex` is frequently *out-of-host-capacity*. If the node pool
-  fails to launch, retry, lower `node_count`, or try another region/AD. (This is an OCI availability
-  constraint, not a config issue.)
+- **DenseIO capacity:** `VM.DenseIO.E5.Flex` (production flavor) is frequently *out-of-host-capacity*.
+  If the node pool fails to launch, retry, lower `target_usable_tb` (fewer workers), pin ADs via
+  `worker_placement_ads`, or try another region/AD. (This is an OCI availability constraint, not a
+  config issue.)
 - The WEKA CRs are **bundled** in this stack's own [`crds/`](crds) (copies of the repo-root
   `crds/`) so the stack is self-contained — a standalone zip (ORM upload / publish) includes them.
   Keep the two in sync if you edit the manifests.

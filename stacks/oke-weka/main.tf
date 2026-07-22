@@ -36,6 +36,56 @@ locals {
   worker_mode    = local.is_production ? "node-pool" : "instance-pool"
 
   # ---------------------------------------------------------------------------
+  # Capacity-driven worker count (production flavor).
+  #
+  # A production worker is VM.DenseIO.E5.Flex (8 OCPU) with 1 x 6.8 TB local NVMe,
+  # i.e. one failure domain contributing 6.8 TB raw. WEKA usable capacity is:
+  #
+  #   usable = (N - HS) x 6.8 x SW/(SW + RL) x 0.9
+  #
+  # where SW = stripe width (data), RL = redundancy, HS = hot spare (1). The
+  # protection scheme adapts to cluster size: it is always "x + 2 + 1" until the
+  # cluster is big enough for double protection, which needs 16 + 4 + 1 = 21 nodes.
+  #   - N < 21  : RL = 2, HS = 1, SW = min(16, N - 3)   -> "x+2+1"
+  #   - N >= 21 : RL = 4, HS = 1, SW = 16               -> "16+4+1", then keep
+  #               SW=16/RL=4/HS=1 and add nodes ("keep scaling past 21").
+  #
+  # In the single-stripe +2 regime the N cancels and usable = 6.12 x SW (6.8 x 0.9).
+  # Examples: 6 -> 3+2+1 ~18 TB | 8 -> 5+2+1 ~31 TB | 10 -> 7+2+1 ~43 TB |
+  # 19 -> 16+2+1 ~98 TB | 21 -> 16+4+1 ~98 TB | 32 -> 16+4+1 ~152 TB.
+  #
+  # Non-production ignores all of this and uses var.node_count directly (drives
+  # come from a block volume sized by data_volume_gb, not local NVMe).
+  # ---------------------------------------------------------------------------
+  nvme_tb_per_node = 6.8
+  weka_fs_overhead = 0.9
+  weka_hot_spare   = 1
+  max_stripe_width = 16
+
+  # +2 single-stripe regime: usable = 6.12 x SW (the N in raw=6.8*N cancels).
+  usable_per_sw_tb    = local.nvme_tb_per_node * local.weka_fs_overhead                # 6.12
+  max_plus2_usable_tb = local.usable_per_sw_tb * local.max_stripe_width                # 97.92
+  # +4 regime (16+4+1, scaling past 21): each node past the hot spare adds
+  # 6.8 x 16/20 x 0.9 = 4.896 TB of usable.
+  usable_per_node_plus4_tb = local.nvme_tb_per_node * (local.max_stripe_width / (local.max_stripe_width + 4)) * local.weka_fs_overhead # 4.896
+
+  # Derive the worker count from the requested target usable capacity.
+  #   +2: SW = ceil(target / 6.12) (>=3), N = SW + 2 + 1  -> N in [6, 19]
+  #   +4: only once the +2 max (~98 TB) is exceeded; N = ceil(target / 4.896) + 1 (>=21)
+  sw_plus2 = max(3, ceil(var.target_usable_tb / local.usable_per_sw_tb))
+  n_plus2  = local.sw_plus2 + 2 + local.weka_hot_spare
+  n_plus4  = max(21, ceil(var.target_usable_tb / local.usable_per_node_plus4_tb) + local.weka_hot_spare)
+
+  production_node_count = max(6, var.target_usable_tb > local.max_plus2_usable_tb ? local.n_plus4 : local.n_plus2)
+  effective_node_count  = local.is_production ? local.production_node_count : var.node_count
+
+  # Protection scheme + capacity implied by the chosen count (surfaced in outputs).
+  weka_redundancy   = local.effective_node_count >= 21 ? 4 : 2
+  weka_stripe_width = min(local.max_stripe_width, local.effective_node_count - local.weka_redundancy - local.weka_hot_spare)
+  cluster_raw_tb    = local.effective_node_count * local.nvme_tb_per_node
+  cluster_usable_tb = (local.effective_node_count - local.weka_hot_spare) * local.nvme_tb_per_node * (local.weka_stripe_width / (local.weka_stripe_width + local.weka_redundancy)) * local.weka_fs_overhead
+
+  # ---------------------------------------------------------------------------
   # Cloud-init — shared for BOTH flavors.
   #
   # We set disable_default_cloud_init = true and supply this fully self-contained
@@ -112,7 +162,7 @@ locals {
       {
         description      = "WEKA converged node pool (flavor=${var.flavor})"
         mode             = local.worker_mode
-        size             = var.node_count
+        size             = local.effective_node_count
         shape            = local.node_shape
         ocpus            = local.node_ocpus
         memory           = local.node_memory_gb

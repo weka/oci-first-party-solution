@@ -34,6 +34,28 @@ output "create_kubeconfig_command" {
   )
 }
 
+# --- Sizing ---
+output "weka_sizing" {
+  description = <<-EOT
+    Derived worker sizing. Production shows the WEKA protection scheme (stripe
+    width + redundancy + hot spare) and raw/usable capacity for the count derived
+    from target_usable_tb; non-production shows the block-volume layout.
+  EOT
+  value = local.is_production ? join("\n", [
+    "flavor:        production (VM.DenseIO.E5.Flex, local NVMe)",
+    "target usable: ${var.target_usable_tb} TB",
+    "workers:       ${local.effective_node_count}",
+    "protection:    ${local.weka_stripe_width}+${local.weka_redundancy}+${local.weka_hot_spare} (stripe width + redundancy + hot spare)",
+    "raw:           ${format("%.1f", local.cluster_raw_tb)} TB (${local.effective_node_count} x 6.8 TB NVMe)",
+    "usable:        ~${format("%.1f", local.cluster_usable_tb)} TB",
+    ]) : join("\n", [
+    "flavor:        non-production (VM.Standard.E5.Flex, block volume)",
+    "workers:       ${local.effective_node_count}",
+    "per-node data: ${var.data_volume_gb} GB block volume",
+    "raw:           ${format("%.1f", local.effective_node_count * var.data_volume_gb / 1000)} TB (${local.effective_node_count} x ${var.data_volume_gb} GB)",
+  ])
+}
+
 # --- WEKA layer ---
 output "operator_namespace" {
   description = "Namespace the WEKA operator runs in."

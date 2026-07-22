@@ -55,7 +55,7 @@ data "oci_core_vcn" "this" {
 }
 
 resource "oci_core_security_list" "weka_data" {
-  compartment_id = var.compartment_id
+  compartment_id = var.compartment_ocid
   vcn_id         = module.oke.vcn_id
   display_name   = "${var.cluster_name}-weka-data-intra-vcn"
 

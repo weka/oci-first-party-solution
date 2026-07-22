@@ -1,9 +1,9 @@
 # Copy to terraform.tfvars and fill in. This ONE stack does cluster + WEKA.
 
 # REQUIRED — your OCI account specifics:
-# NOTE: OCI Resource Manager auto-populates tenancy_ocid; only set it for local/CLI runs.
-tenancy_ocid   = "ocid1.tenancy.oc1..xxxxx"
-compartment_id = "ocid1.compartment.oc1..xxxxx"
+# NOTE: OCI Resource Manager auto-populates tenancy_ocid and compartment_ocid; only set them for local/CLI runs.
+tenancy_ocid     = "ocid1.tenancy.oc1..xxxxx"
+compartment_ocid = "ocid1.compartment.oc1..xxxxx"
 
 # REQUIRED — quay.io robot creds from https://get.weka.io (sensitive):
 quay_username = "weka.io+robot"

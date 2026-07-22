@@ -1,11 +1,9 @@
 title: "WEKA on OKE — All-in-one (cluster + operator)"
 description: >-
-  One-click stack: provisions the OKE cluster (converged node pool with your
-  choice of drive topology, hugepages, intra-VCN data-plane fix) AND installs
-  the WEKA operator + image pull secrets + WekaPolicy/WekaCluster/WekaClient —
-  all in a single apply. non-production flavor: VM.Standard.E5.Flex + block
-  volume (capacity-friendly, default). production flavor: VM.DenseIO.E5.Flex +
-  local NVMe (best drive performance, subject to DenseIO host-capacity limits).
+  One-click stack: provisions the OKE cluster and installs the WEKA operator,
+  image pull secret, and WekaPolicy/WekaCluster/WekaClient in a single apply.
+  Pick the worker flavor below (non-production = Standard + block volume,
+  default; production = DenseIO + local NVMe).
 schemaVersion: 1.1.0
 version: "20240101"
 locale: "en"
@@ -19,15 +17,12 @@ variableGroups:
       - region
       - home_region
       - tenancy_ocid
+      - compartment_ocid
       - control_plane_allowed_cidrs
       - vcn_cidrs
       - subnets
       - nsgs
       - ssh_public_key_path
-
-  - title: "Identity"
-    variables:
-      - compartment_id
 
   - title: "WEKA (operator + image pull)"
     variables:
@@ -69,13 +64,6 @@ variableGroups:
       - ssh_public_key
 
 variables:
-  # --- Identity ---
-  compartment_id:
-    title: Compartment
-    description: Compartment where OKE + WEKA resources are created.
-    type: oci:identity:compartment:id
-    required: true
-
   # --- WEKA ---
   quay_username:
     title: quay.io robot username
@@ -127,13 +115,10 @@ variables:
   flavor:
     title: Cluster flavor
     description: >-
-      Controls drive topology, node shape, and pool mode.
-      non-production (default): VM.Standard.E5.Flex (10 OCPU / 80 GB), instance-pool,
-      paravirtualized block volume as WEKA drives. Standard shapes have abundant quota;
-      good for operator/CSI integration testing where IO throughput is not the focus.
-      production: VM.DenseIO.E5.Flex (8 OCPU / 96 GB), node-pool (managed OKE), local
-      NVMe as WEKA drives. Best drive performance. DenseIO quota is limited — check AD
-      capacity before provisioning.
+      Drive topology / shape / pool mode. non-production (default):
+      VM.Standard.E5.Flex, instance-pool, block-volume drives — abundant quota,
+      good for operator/CSI testing. production: VM.DenseIO.E5.Flex, node-pool,
+      local NVMe — best IO, but DenseIO quota is limited (check AD capacity).
     type: enum
     enum: [non-production, production]
     default: non-production
@@ -227,7 +212,7 @@ variables:
       not:
         - create_vcn
     dependsOn:
-      compartmentId: ${compartment_id}
+      compartmentId: ${compartment_ocid}
 
   # --- SSH ---
   ssh_public_key:

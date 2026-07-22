@@ -157,7 +157,7 @@ module "oke" {
 
   # Tenancy / region
   tenancy_id     = var.tenancy_ocid
-  compartment_id = var.compartment_id
+  compartment_id = var.compartment_ocid
   region         = var.region
   home_region    = coalesce(var.home_region, var.region)
 

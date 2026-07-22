@@ -1,5 +1,5 @@
 # Inputs for the OKE cluster. Sizing/topology have sensible defaults; the
-# account-specific values (compartment_id, tenancy_id) are required — set them
+# account-specific values (compartment_ocid, tenancy_ocid) are required — set them
 # in terraform.tfvars (see terraform.tfvars.example) or via -var / TF_VAR_*.
 
 # ---------------------------------------------------------------------------
@@ -51,8 +51,8 @@ variable "tenancy_ocid" {
   type        = string
 }
 
-variable "compartment_id" {
-  description = "Compartment OCID where OKE resources are created. Required."
+variable "compartment_ocid" {
+  description = "Compartment for all resources. Auto-populated by OCI Resource Manager (reserved variable); defaults to the compartment the stack is created in."
   type        = string
 }
 

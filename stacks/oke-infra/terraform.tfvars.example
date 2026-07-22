@@ -1,9 +1,9 @@
 # Copy to terraform.tfvars and fill in your values.
 #
 # REQUIRED — no defaults (your OCI account specifics):
-# NOTE: OCI Resource Manager auto-populates tenancy_ocid; only set it for local/CLI runs.
-tenancy_ocid   = "ocid1.tenancy.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-compartment_id = "ocid1.compartment.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# NOTE: OCI Resource Manager auto-populates tenancy_ocid and compartment_ocid; only set them for local/CLI runs.
+tenancy_ocid     = "ocid1.tenancy.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+compartment_ocid = "ocid1.compartment.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
 # --- Auth / region (optional; shown with defaults) ---
 # Pick auth per environment for the one `oci` CLI call (subnet attach):

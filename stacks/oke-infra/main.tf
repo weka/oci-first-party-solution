@@ -12,7 +12,8 @@ locals {
   #
   # production:
   #   shape = VM.DenseIO.E5.Flex   mode = node-pool (managed OKE)
-  #   8 OCPU / 96 GB (12 GB/OCPU × 8). 1 local NVMe per 8 OCPU.
+  #   Default 8 OCPU / 96 GB. OCI allows 1–48 GB/OCPU for DenseIO.E5.Flex;
+  #   only NVMe count is fixed at 1 per 8 OCPU.
   #   WEKA operator's sign-drives WekaPolicy discovers NVMe as weka.io/drives.
   #   No block volume needed or attached.
   #   Trade-off: DenseIO quota is limited; check AD capacity before provisioning
@@ -156,7 +157,7 @@ module "oke" {
   }
 
   # Tenancy / region
-  tenancy_id     = var.tenancy_id
+  tenancy_id     = var.tenancy_ocid
   compartment_id = var.compartment_id
   region         = var.region
   home_region    = coalesce(var.home_region, var.region)

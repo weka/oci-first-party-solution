@@ -19,6 +19,7 @@ variableGroups:
       - oci_cli_auth
       - region
       - home_region
+      - tenancy_ocid
       - control_plane_allowed_cidrs
       - vcn_cidrs
       - subnets
@@ -28,7 +29,6 @@ variableGroups:
   - title: "Identity"
     variables:
       - compartment_id
-      - tenancy_id
 
   - title: "Cluster"
     variables:
@@ -68,10 +68,6 @@ variables:
   compartment_id:
     title: Compartment
     description: Compartment where OKE resources are created.
-    type: oci:identity:compartment:id
-    required: true
-  tenancy_id:
-    title: Tenancy
     type: oci:identity:compartment:id
     required: true
 
@@ -185,8 +181,8 @@ variables:
     title: Memory (GB) override
     description: >-
       Optional. Memory (GB) per worker node. When left blank, derived from flavor
-      (96 for production, 80 for non-production). DenseIO E5 requires a minimum of
-      12 GB per OCPU — set this accordingly when overriding node_ocpus.
+      (96 for production, 80 for non-production). OCI allows 1–48 GB/OCPU for
+      DenseIO.E5.Flex; only NVMe count is fixed at 1 per 8 OCPU.
     type: number
     required: false
     minimum: 1

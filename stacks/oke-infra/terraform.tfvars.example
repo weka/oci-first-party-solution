@@ -1,7 +1,8 @@
 # Copy to terraform.tfvars and fill in your values.
 #
 # REQUIRED — no defaults (your OCI account specifics):
-tenancy_id     = "ocid1.tenancy.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# NOTE: OCI Resource Manager auto-populates tenancy_ocid; only set it for local/CLI runs.
+tenancy_ocid   = "ocid1.tenancy.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 compartment_id = "ocid1.compartment.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
 # --- Auth / region (optional; shown with defaults) ---
@@ -30,7 +31,7 @@ compartment_id = "ocid1.compartment.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # --- Advanced sizing overrides (optional; null = use flavor default) ---
 # node_ocpus     = 16                   # optional: override flavor default (e.g. 16 OCPU DenseIO = 2 NVMe)
-# node_memory_gb = 192                  # optional: override flavor default (DenseIO E5 min 12 GB/OCPU)
+# node_memory_gb = 192                  # optional: override flavor default (OCI allows 1-48 GB/OCPU for DenseIO.E5.Flex)
 # node_shape     = "VM.DenseIO.E5.Flex" # optional: override flavor default shape
 
 # --- Control plane access (optional) ---

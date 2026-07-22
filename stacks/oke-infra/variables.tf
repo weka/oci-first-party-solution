@@ -46,8 +46,8 @@ variable "home_region" {
   default     = null
 }
 
-variable "tenancy_id" {
-  description = "Tenancy OCID. Required."
+variable "tenancy_ocid" {
+  description = "Tenancy OCID. OCI Resource Manager auto-populates this reserved variable; for local/CLI runs set it in terraform.tfvars."
   type        = string
 }
 
@@ -118,7 +118,8 @@ variable "control_plane_allowed_cidrs" {
 #
 # production:     VM.DenseIO.E5.Flex, node-pool (managed OKE).
 #                 Local NVMe is discovered as weka.io/drives — no block volume.
-#                 DenseIO E5 requires 12 GB/OCPU; 8 OCPU = 96 GB = 1 NVMe.
+#                 OCI allows 1–48 GB/OCPU for DenseIO.E5.Flex; only NVMe count
+#                 is fixed at 1 per 8 OCPU. Default derives from flavor (8 OCPU / 96 GB).
 #                 Use for real WEKA testing with best drive performance.
 #                 DenseIO quota is limited; check AD capacity before provisioning.
 #
@@ -181,7 +182,7 @@ variable "node_ocpus" {
 }
 
 variable "node_memory_gb" {
-  description = "Optional override for memory (GB) per worker node. When null, derived from flavor (96 for production, 80 for non-production)."
+  description = "Optional override for memory (GB) per worker node. When null, derived from flavor (96 for production, 80 for non-production). OCI allows 1–48 GB/OCPU for DenseIO.E5.Flex; only NVMe count is fixed at 1 per 8 OCPU."
   type        = number
   default     = null
 }

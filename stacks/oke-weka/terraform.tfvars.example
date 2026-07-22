@@ -1,7 +1,8 @@
 # Copy to terraform.tfvars and fill in. This ONE stack does cluster + WEKA.
 
 # REQUIRED — your OCI account specifics:
-tenancy_id     = "ocid1.tenancy.oc1..xxxxx"
+# NOTE: OCI Resource Manager auto-populates tenancy_ocid; only set it for local/CLI runs.
+tenancy_ocid   = "ocid1.tenancy.oc1..xxxxx"
 compartment_id = "ocid1.compartment.oc1..xxxxx"
 
 # REQUIRED — quay.io robot creds from https://get.weka.io (sensitive):
@@ -20,7 +21,17 @@ quay_password = "..."
 # config_file_profile = "DEFAULT"
 # region              = "us-phoenix-1"
 
-# --- Optional cluster/worker overrides (defaults shown) ---
+# --- Workers: converged WEKA nodes (optional) ---
+# flavor          = "non-production"   # non-production: Standard.E5.Flex + block volume (default)
+#                                      # production:     DenseIO.E5.Flex + local NVMe (best perf, scarce quota)
+# data_volume_gb  = 100                # block-volume size (GB) for non-production flavor; ignored for production
+# node_count      = 6
+
+# --- Advanced sizing overrides (optional; null = use flavor default) ---
+# node_ocpus     = 16                   # optional: override flavor default (e.g. 16 OCPU DenseIO = 2 NVMe)
+# node_memory_gb = 192                  # optional: override flavor default (OCI allows 1-48 GB/OCPU for DenseIO.E5.Flex)
+# node_shape     = "VM.DenseIO.E5.Flex" # optional: override flavor default shape
+
+# --- Optional cluster/operator overrides (defaults shown) ---
 # cluster_name     = "weka-oke"
-# node_count       = 6            # WEKA needs enough DenseIO nodes to form
 # operator_version = "v1.14.1"

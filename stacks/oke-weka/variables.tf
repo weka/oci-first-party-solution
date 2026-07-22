@@ -195,7 +195,7 @@ variable "target_usable_tb_custom" {
   type        = number
   default     = null
   validation {
-    condition     = var.target_usable_tb_custom == null || var.target_usable_tb_custom >= 1
+    condition     = var.target_usable_tb_custom == null ? true : var.target_usable_tb_custom >= 1
     error_message = "target_usable_tb_custom must be at least 1 TB when set."
   }
 }

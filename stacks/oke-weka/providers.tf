@@ -10,7 +10,7 @@
 # one-click in the ORM Console.
 
 terraform {
-  required_version = ">= 1.3.0"
+  required_version = ">= 1.4.0" # terraform_data (capacity preflight gate)
 
   required_providers {
     oci = {

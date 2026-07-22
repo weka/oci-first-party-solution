@@ -8,6 +8,11 @@ output "cluster_endpoints" {
   value       = module.oke.cluster_endpoints
 }
 
+output "console_url" {
+  description = "Direct link to this OKE cluster in the OCI Console (drives the primary button on the stack's Application Information tab)."
+  value       = "https://cloud.oracle.com/containers/clusters/${module.oke.cluster_id}?region=${var.region}"
+}
+
 output "region" {
   description = "Region the cluster lives in (for create-kubeconfig, and as input to the weka-layer stack)."
   value       = var.region

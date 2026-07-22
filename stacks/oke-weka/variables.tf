@@ -253,6 +253,18 @@ variable "node_count" {
   }
 }
 
+variable "skip_capacity_preflight" {
+  description = <<-EOT
+    Skip the production NVMe host-capacity preflight (see capacity.tf). The
+    preflight hard-fails early when no availability domain has free DenseIO
+    capacity for the worker shape; set this true to bypass it — e.g. if the
+    capacity report is wrong for your tenancy, or your tenancy lacks the
+    "inspect compute-capacity-reports" permission. Ignored for non-production.
+  EOT
+  type        = bool
+  default     = false
+}
+
 variable "worker_placement_ads" {
   description = <<-EOT
     Comma-separated availability-domain NUMBERS to place worker nodes in (e.g. "1,2").

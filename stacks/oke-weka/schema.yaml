@@ -9,6 +9,22 @@ schemaVersion: 1.1.0
 version: "20240101"
 locale: "en"
 
+# 130x130 logo shown on the Application Information tab (fetched by the Console
+# from this public raw URL, not from the zip).
+logoUrl: "https://raw.githubusercontent.com/weka/oci-first-party-solution/main/stacks/oke-weka/logo.png"
+
+# Blue info box on the Create stack page — prerequisites + the production-capacity
+# caveat, shown before the user runs anything.
+informationalText: >-
+  Prerequisites: a get.weka.io robot account (quay.io username + password) for the
+  image pull secret. Choose a flavor below — non-production uses block-volume
+  drives with abundant quota (best for trying the CSI driver / operator), while
+  production uses local-NVMe DenseIO workers sized by target capacity. NVMe
+  capacity is scarce: if a production apply fails with "Out of host capacity", try
+  another region, pin an availability domain, or fall back to non-production.
+  After apply, the Application Information tab gives you a one-click kubeconfig
+  command and a link straight to the cluster.
+
 variableGroups:
   - title: "Hidden"
     visible: false
@@ -54,6 +70,7 @@ variableGroups:
       - target_usable_tb
       - target_usable_tb_custom
       - node_count
+      - skip_capacity_preflight
 
   - title: "Kubernetes API"
     variables:
@@ -147,6 +164,19 @@ variables:
       eq:
         - flavor
         - production
+  skip_capacity_preflight:
+    title: Skip NVMe capacity preflight
+    description: >-
+      Production only. Before building, the stack checks DenseIO host capacity
+      across the region's availability domains and stops early with guidance if
+      none is free. Turn this on to bypass that check — e.g. if the capacity
+      report is wrong for your tenancy, or you lack permission to read it.
+    type: boolean
+    default: false
+    visible:
+      eq:
+        - flavor
+        - production
   node_count:
     title: Instance count
     description: >-
@@ -193,3 +223,60 @@ variables:
     description: Public key injected into worker nodes (paste the contents of your .pub file).
     type: oci:core:ssh:publickey
     required: false
+
+# ---------------------------------------------------------------------------
+# Application Information tab — shown after a successful apply. Declaring the
+# outputs here (with types) turns the raw Terraform outputs into a polished
+# panel: a primary "Go to cluster" button, copy-buttons for the commands, and a
+# grouped summary. Every name below must match an output in outputs.tf.
+# ---------------------------------------------------------------------------
+outputs:
+  console_url:
+    type: link
+    title: "Open the OKE cluster in the OCI Console"
+    visible: true
+  create_kubeconfig_command:
+    type: copyableString
+    title: "Write a kubeconfig (run locally)"
+    visible: true
+  verify_commands:
+    type: copyableString
+    title: "Verify WEKA came up"
+    visible: true
+  weka_sizing:
+    type: string
+    title: "Derived WEKA sizing"
+    visible: true
+  cluster_id:
+    type: copyableString
+    title: "Cluster OCID"
+    visible: true
+  region:
+    type: string
+    title: "Region"
+    visible: true
+  operator_namespace:
+    type: string
+    title: "WEKA operator namespace"
+    visible: true
+  applied_custom_resources:
+    type: string
+    title: "Applied WEKA custom resources"
+    visible: true
+
+outputGroups:
+  - title: "Access your cluster"
+    outputs:
+      - console_url
+      - create_kubeconfig_command
+      - verify_commands
+  - title: "Cluster details"
+    outputs:
+      - weka_sizing
+      - cluster_id
+      - region
+      - operator_namespace
+      - applied_custom_resources
+
+# Primary call-to-action button on the Application Information tab.
+primaryOutputButton: console_url

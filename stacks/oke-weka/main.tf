@@ -211,6 +211,11 @@ module "oke" {
   source  = "oracle-terraform-modules/oke/oci"
   version = "5.5.0"
 
+  # Wait behind the production NVMe capacity preflight (capacity.tf): if no AD
+  # has DenseIO capacity, the gate's precondition fails before anything here is
+  # built. No-op when the preflight is disabled or on the non-production flavor.
+  depends_on = [terraform_data.capacity_gate]
+
   providers = {
     oci      = oci
     oci.home = oci.home

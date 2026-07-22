@@ -136,15 +136,15 @@ variable "control_plane_allowed_cidrs" {
 variable "flavor" {
   description = <<-EOT
     Cluster flavor — controls drive topology, node shape, and pool mode:
-      "non-production" (default): VM.Standard.E5.Flex, instance-pool, paravirtualized
-        block volume as WEKA drives. Standard shapes have abundant quota; ideal for
+      "production" (default): VM.DenseIO.E5.Flex, node-pool (managed OKE), local NVMe
+        as WEKA drives. Best drive performance. DenseIO quota is limited — check AD
+        capacity (oci compute compute-capacity-report) before provisioning.
+      "non-production": VM.Standard.E5.Flex, instance-pool, paravirtualized block
+        volume as WEKA drives. Standard shapes have abundant quota; ideal for
         operator/CSI integration testing where raw IO throughput is not the goal.
-      "production": VM.DenseIO.E5.Flex, node-pool (managed OKE), local NVMe as WEKA
-        drives. Best drive performance. DenseIO quota is limited — check AD capacity
-        (oci compute compute-capacity-report) before provisioning.
   EOT
   type        = string
-  default     = "non-production"
+  default     = "production"
   validation {
     condition     = contains(["production", "non-production"], var.flavor)
     error_message = "flavor must be one of: production, non-production"

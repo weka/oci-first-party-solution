@@ -2,9 +2,9 @@ title: "WEKA on OKE — All-in-one (cluster + operator)"
 description: >-
   One-click stack: provisions the OKE cluster and installs the WEKA operator,
   image pull secret, and WekaPolicy/WekaCluster/WekaClient in a single apply.
-  Pick the worker flavor below (non-production = block-volume drives, default,
-  for trying out the CSI driver / operator; production = local-NVMe workers,
-  sized by target capacity).
+  Pick the worker flavor below (production = local-NVMe workers, default, sized
+  by target capacity; non-production = block-volume drives, for trying out the
+  CSI driver / operator).
 schemaVersion: 1.1.0
 version: "20240101"
 locale: "en"
@@ -109,14 +109,14 @@ variables:
   flavor:
     title: Cluster flavor
     description: >-
-      non-production (default): block-volume drives with abundant quota. This is
-      NOT for performance — use it to see how the WEKA CSI driver and operator
-      behave. production: local-NVMe workers with the best IO, sized by the target
+      production (default): local-NVMe workers with the best IO, sized by the target
       usable capacity below; NVMe capacity is limited, so check availability-domain
-      capacity before provisioning.
+      capacity before provisioning. non-production: block-volume drives with abundant
+      quota. This is NOT for performance — use it to see how the WEKA CSI driver and
+      operator behave.
     type: enum
     enum: [non-production, production]
-    default: non-production
+    default: production
     required: true
   target_usable_tb:
     title: Target usable capacity

@@ -22,8 +22,8 @@ quay_password = "..."
 # region              = "us-phoenix-1"
 
 # --- Workers: converged WEKA nodes (optional) ---
-# flavor           = "non-production"  # non-production: Standard.E5.Flex + block volume (default)
-#                                      # production:     DenseIO.E5.Flex + local NVMe (best perf, scarce quota)
+# flavor           = "production"      # production:     DenseIO.E5.Flex + local NVMe (best perf, scarce quota) (default)
+#                                      # non-production: Standard.E5.Flex + block volume
 #
 # production flavor — sized by target usable capacity (worker count is derived):
 # target_usable_tb = 18                # ~18 TB ≈ 6-node min (3+2+1); ~43 TB ≈ 10 nodes (7+2+1); ~98 TB ≈ 19-21 nodes

@@ -170,19 +170,33 @@ variable "data_volume_gb" {
 # ---------------------------------------------------------------------------
 variable "target_usable_tb" {
   description = <<-EOT
-    Target WEKA usable capacity in TB (production flavor only). The worker count is
-    derived from this. Each VM.DenseIO.E5.Flex node contributes 1 x 6.8 TB NVMe;
-    protection is "x+2+1" below 21 nodes (usable ~= 6.12 TB per data drive) and
-    "16+4+1" at 21+ nodes (double protection needs 16+4+1 = 21 servers), scaling
-    past 21 at ~4.9 TB usable/node. Reference points: ~18 TB at the 6-node minimum
-    (3+2+1), ~43 TB at 10 nodes (7+2+1), ~98 TB at 19-21 nodes. See the weka_sizing
-    output for the exact scheme and capacity of the derived cluster.
+    Target WEKA usable capacity (production flavor only), chosen from the ORM
+    dropdown as a "<TB> TB (<N> servers ...)" string. The bracketed server count
+    is authoritative — it becomes the worker count directly. Options 6-19 servers
+    (~18-97 TB) use single protection "x+2+1"; the 21-server option holds ~98 TB
+    but switches to double protection "16+4+1" (survives 4 concurrent failures).
+    To size a larger cluster than the presets, leave this at the default and set
+    target_usable_tb_custom. See the weka_sizing output for the derived scheme.
+  EOT
+  type        = string
+  default     = "18 TB (6 servers)"
+  validation {
+    condition     = can(tonumber(split(" ", var.target_usable_tb)[0]))
+    error_message = "target_usable_tb must look like \"18 TB (6 servers)\" (a leading TB number)."
+  }
+}
+
+variable "target_usable_tb_custom" {
+  description = <<-EOT
+    Optional custom target usable capacity in TB (production flavor). When set
+    (non-null) it OVERRIDES the target_usable_tb dropdown — use it to size a
+    cluster larger than the presets offer (more servers). Minimum 1.
   EOT
   type        = number
-  default     = 18
+  default     = null
   validation {
-    condition     = var.target_usable_tb >= 1
-    error_message = "target_usable_tb must be at least 1 TB."
+    condition     = var.target_usable_tb_custom == null || var.target_usable_tb_custom >= 1
+    error_message = "target_usable_tb_custom must be at least 1 TB when set."
   }
 }
 

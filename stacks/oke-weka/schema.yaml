@@ -2,8 +2,9 @@ title: "WEKA on OKE — All-in-one (cluster + operator)"
 description: >-
   One-click stack: provisions the OKE cluster and installs the WEKA operator,
   image pull secret, and WekaPolicy/WekaCluster/WekaClient in a single apply.
-  Pick the worker flavor below (non-production = Standard + block volume,
-  default; production = DenseIO + local NVMe, sized by target capacity).
+  Pick the worker flavor below (non-production = block-volume drives, default,
+  for trying out the CSI driver / operator; production = local-NVMe workers,
+  sized by target capacity).
 schemaVersion: 1.1.0
 version: "20240101"
 locale: "en"
@@ -33,6 +34,13 @@ variableGroups:
       - node_boot_volume_gb
       - node_hugepages
       - worker_image_os_version
+      # Advanced sizing overrides — derived from flavor by default; not shown.
+      - node_shape
+      - node_ocpus
+      - node_memory_gb
+      - worker_placement_ads
+      # Non-production block-volume size — fixed default, not customer-facing.
+      - data_volume_gb
 
   - title: "WEKA (operator + image pull)"
     variables:
@@ -44,8 +52,8 @@ variableGroups:
     variables:
       - flavor
       - target_usable_tb
+      - target_usable_tb_custom
       - node_count
-      - data_volume_gb
 
   - title: "Kubernetes API"
     variables:
@@ -83,30 +91,58 @@ variables:
   flavor:
     title: Cluster flavor
     description: >-
-      non-production (VM.Standard.E5.Flex — instance-pool, block-volume drives):
-      abundant quota, good for operator/CSI testing; you set the instance count
-      and per-node block-volume size. production (VM.DenseIO.E5.Flex — node-pool,
-      local NVMe): best IO, sized by target usable capacity; DenseIO quota is
-      limited (check AD capacity).
+      non-production (default): block-volume drives with abundant quota. This is
+      NOT for performance — use it to see how the WEKA CSI driver and operator
+      behave. production: local-NVMe workers with the best IO, sized by the target
+      usable capacity below; NVMe capacity is limited, so check availability-domain
+      capacity before provisioning.
     type: enum
     enum: [non-production, production]
     default: non-production
     required: true
   target_usable_tb:
-    title: Target usable capacity (TB)
+    title: Target usable capacity
     description: >-
-      Production only. The worker count is derived from this. Each VM.DenseIO.E5.Flex
-      node adds 1 × 6.8 TB NVMe. Protection adapts to cluster size: "x+2+1" below 21
-      nodes (stripe width x + 2 redundancy + 1 hot spare; ~6.12 TB usable per data
-      drive) and "16+4+1" at 21+ nodes, since double protection needs 16+4+1 = 21
-      servers — then it keeps scaling past 21 at ~4.9 TB usable/node. Reference
-      points: ~18 TB at the 6-node minimum (3+2+1), ~43 TB at 10 nodes (7+2+1),
-      ~98 TB at 19-21 nodes. The exact scheme + capacity of the derived cluster is
-      shown in the weka_sizing output after Plan.
-    type: number
-    default: 18
-    minimum: 1
+      Production only. Pick a target usable capacity; the bracketed number is how
+      many servers it maps to. Options 6-19 servers (~18-97 TB) run single
+      protection ("x+2+1", survives 2 concurrent failures). The last option,
+      21 servers, stays at ~98 TB usable but is the smallest cluster that gets
+      double protection ("16+4+1", survives 4 concurrent failures) — pick it for
+      resilience rather than more space. To size a bigger cluster than these
+      presets, leave this at the default and fill "Custom target capacity" below.
+      The derived scheme + capacity are shown in the weka_sizing output after Plan.
+    type: enum
+    enum:
+      - "18 TB (6 servers)"
+      - "24 TB (7 servers)"
+      - "30 TB (8 servers)"
+      - "36 TB (9 servers)"
+      - "42 TB (10 servers)"
+      - "48 TB (11 servers)"
+      - "55 TB (12 servers)"
+      - "61 TB (13 servers)"
+      - "67 TB (14 servers)"
+      - "73 TB (15 servers)"
+      - "79 TB (16 servers)"
+      - "85 TB (17 servers)"
+      - "91 TB (18 servers)"
+      - "97 TB (19 servers)"
+      - "98 TB (21 servers — double protection)"
+    default: "18 TB (6 servers)"
     required: true
+    visible:
+      eq:
+        - flavor
+        - production
+  target_usable_tb_custom:
+    title: Custom target capacity (TB)
+    description: >-
+      Production only, optional. Leave empty to use the dropdown above. Enter a TB
+      number to size a larger cluster than the presets offer (more servers) — this
+      overrides the dropdown.
+    type: number
+    minimum: 1
+    required: false
     visible:
       eq:
         - flavor
@@ -114,27 +150,13 @@ variables:
   node_count:
     title: Instance count
     description: >-
-      Non-production only. Number of VM.Standard.E5.Flex worker instances. WEKA
-      needs enough nodes to form a cluster (minimum 6). Capacity comes from the
-      per-node block volume below, not the instance count.
+      Non-production only. Number of worker instances (minimum 6, enough for WEKA
+      to form a cluster). Capacity comes from a per-node block volume, so the
+      instance count just sets how many nodes make up the cluster.
     type: number
     default: 6
     minimum: 6
     required: true
-    visible:
-      eq:
-        - flavor
-        - non-production
-  data_volume_gb:
-    title: Data volume size (GB)
-    description: >-
-      Non-production only. Size of the paravirtualized block-volume data disk
-      attached per worker node (VM.Standard.E5.Flex + instance-pool). Ignored for
-      production (local NVMe is used instead). Minimum 50.
-    type: number
-    default: 100
-    minimum: 50
-    required: false
     visible:
       eq:
         - flavor

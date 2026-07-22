@@ -69,14 +69,25 @@ locals {
   # 6.8 x 16/20 x 0.9 = 4.896 TB of usable.
   usable_per_node_plus4_tb = local.nvme_tb_per_node * (local.max_stripe_width / (local.max_stripe_width + 4)) * local.weka_fs_overhead # 4.896
 
-  # Derive the worker count from the requested target usable capacity.
-  #   +2: SW = ceil(target / 6.12) (>=3), N = SW + 2 + 1  -> N in [6, 19]
-  #   +4: only once the +2 max (~98 TB) is exceeded; N = ceil(target / 4.896) + 1 (>=21)
-  sw_plus2 = max(3, ceil(var.target_usable_tb / local.usable_per_sw_tb))
-  n_plus2  = local.sw_plus2 + 2 + local.weka_hot_spare
-  n_plus4  = max(21, ceil(var.target_usable_tb / local.usable_per_node_plus4_tb) + local.weka_hot_spare)
+  # Effective target usable TB: the optional custom override wins, otherwise parse
+  # the leading TB number out of the dropdown string (e.g. "18 TB (6 servers)").
+  # Used for the weka_sizing display and for deriving the count on the custom path.
+  target_tb = var.target_usable_tb_custom != null ? var.target_usable_tb_custom : tonumber(split(" ", var.target_usable_tb)[0])
 
-  production_node_count = max(6, var.target_usable_tb > local.max_plus2_usable_tb ? local.n_plus4 : local.n_plus2)
+  # Worker count comes from one of two paths:
+  #   - dropdown pick: the label states the server count ("... (N servers ...)"),
+  #     which is authoritative — the 21-server option can't be reached by deriving
+  #     from TB (usable is flat at ~98 TB from 19 nodes up), so we trust the label.
+  #   - custom TB override: derive the count from target_tb via the protection model
+  #       +2: SW = ceil(target / 6.12) (>=3), N = SW + 2 + 1  -> N in [6, 19]
+  #       +4: once the +2 max (~98 TB) is exceeded; N = ceil(target / 4.896) + 1 (>=21)
+  dropdown_node_count = tonumber(regex("\\(([0-9]+) servers", var.target_usable_tb)[0])
+  sw_plus2            = max(3, ceil(local.target_tb / local.usable_per_sw_tb))
+  n_plus2             = local.sw_plus2 + 2 + local.weka_hot_spare
+  n_plus4             = max(21, ceil(local.target_tb / local.usable_per_node_plus4_tb) + local.weka_hot_spare)
+  custom_node_count   = max(6, local.target_tb > local.max_plus2_usable_tb ? local.n_plus4 : local.n_plus2)
+
+  production_node_count = var.target_usable_tb_custom != null ? local.custom_node_count : local.dropdown_node_count
   effective_node_count  = local.is_production ? local.production_node_count : var.node_count
 
   # Protection scheme + capacity implied by the chosen count (surfaced in outputs).

@@ -43,7 +43,7 @@ output "weka_sizing" {
   EOT
   value = local.is_production ? join("\n", [
     "flavor:        production (VM.DenseIO.E5.Flex, local NVMe)",
-    "target usable: ${var.target_usable_tb} TB",
+    "target usable: ${local.target_tb} TB",
     "workers:       ${local.effective_node_count}",
     "protection:    ${local.weka_stripe_width}+${local.weka_redundancy}+${local.weka_hot_spare} (stripe width + redundancy + hot spare)",
     "raw:           ${format("%.1f", local.cluster_raw_tb)} TB (${local.effective_node_count} x 6.8 TB NVMe)",

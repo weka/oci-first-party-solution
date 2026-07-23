@@ -35,6 +35,14 @@ locals {
   node_memory_gb = var.node_memory_gb != null ? var.node_memory_gb : (local.is_production ? 96 : 80)
   worker_mode    = local.is_production ? "node-pool" : "instance-pool"
 
+  # Self-managed (instance-pool) workers bootstrap themselves via the IMDS
+  # oke_init_script and can ONLY register with an ENHANCED OKE cluster — a BASIC
+  # cluster silently never admits them (workers boot Running but 0 nodes join,
+  # leaving coredns/operator Pending until the helm wait times out). Managed
+  # node-pools work on either, so force enhanced in instance-pool mode and honor
+  # var.cluster_type otherwise.
+  cluster_type = local.worker_mode == "instance-pool" ? "enhanced" : var.cluster_type
+
   # ---------------------------------------------------------------------------
   # Capacity-driven worker count (production flavor).
   #
@@ -244,7 +252,7 @@ module "oke" {
   # Cluster
   create_cluster              = true
   cluster_name                = var.cluster_name
-  cluster_type                = var.cluster_type
+  cluster_type                = local.cluster_type
   kubernetes_version          = var.kubernetes_version
   cni_type                    = var.cni_type
   control_plane_is_public     = var.control_plane_is_public
